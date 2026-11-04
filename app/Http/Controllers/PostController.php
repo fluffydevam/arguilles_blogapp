@@ -9,9 +9,20 @@ use Illuminate\Support\Facades\Auth;
 class PostController extends Controller
 {
     // READ ALL
-    public function index()
+    public function index(Request $request)
     {
-        $posts = Post::latest()->get();
+        $query = Post::query();
+
+        // Filter by date range if provided
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('published_at', [
+                $request->start_date . ' 00:00:00',
+                $request->end_date . ' 23:59:59'
+            ]);
+        }
+
+        $posts = $query->latest('published_at')->get();
+
         return view('posts.index', compact('posts'));
     }
 
@@ -35,7 +46,7 @@ class PostController extends Controller
             'body' => $validated['body'],
             'category' => $validated['category'],
             'author' => Auth::user()->name, // Automatically fetch the logged-in poster's name
-            'published_at' => now(),         // Automatically capture current date and time
+            'published_at' => now(),        // Automatically capture current date and time
         ]);
 
         return redirect()->route('posts.index')->with('success', 'Post created successfully!');
@@ -54,7 +65,7 @@ class PostController extends Controller
     }
 
     // UPDATE DATA
-   public function update(Request $request, Post $post)
+    public function update(Request $request, Post $post)
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -78,6 +89,6 @@ class PostController extends Controller
         $post->delete();
 
         return redirect()->route('posts.index')
-                         ->with('success', 'Post deleted successfully.');
+                        ->with('success', 'Post deleted successfully.');
     }
 }
